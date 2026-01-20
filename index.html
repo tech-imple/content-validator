@@ -1,44 +1,49 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Content Quality Check</title>
+  <title>Content QC Validator</title>
+  <style>
+    body { font-family: Arial; padding: 40px; }
+    input { width: 90%; padding: 10px; margin: 10px 0; }
+    button { padding: 12px 20px; font-size: 16px; cursor: pointer; }
+    #status { margin-top: 15px; }
+  </style>
 </head>
 <body>
 
-<h2>Content Validator</h2>
+<h2>Content Quality Check</h2>
 
-<input type="text" id="id" placeholder="Enter ID"><br><br>
+<input id="oldDoc" placeholder="Old Google Doc URL">
+<input id="newDoc" placeholder="New Google Doc URL">
 
-<textarea id="content" placeholder="Enter Content" rows="6" cols="50"></textarea><br><br>
+<button onclick="runQC()">Run QC</button>
 
-<input type="number" id="score" placeholder="Score"><br><br>
-
-<button onclick="submitData()">Submit</button>
-
-<p id="result"></p>
+<p id="status"></p>
 
 <script>
-function submitData() {
-  const data = {
-    id: document.getElementById("id").value.trim(),
-    content: document.getElementById("content").value.trim(),
-    score: document.getElementById("score").value
-  };
+function runQC() {
+  const oldDoc = document.getElementById("oldDoc").value.trim();
+  const newDoc = document.getElementById("newDoc").value.trim();
+
+  if (!oldDoc || !newDoc) {
+    alert("Both URLs are required");
+    return;
+  }
+
+  document.getElementById("status").innerText = "Submitting...";
 
   fetch("https://script.google.com/macros/s/AKfycbwg7hhvgc_Iv2w4Fmz7UMW4nfc0JkbbaRDy93X6eFSqkYOWTDqHk8u9gX0f-pqwUso/exec", {
     method: "POST",
-    mode: "no-cors",   // 🔥 IMPORTANT FOR GOOGLE SCRIPT
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(data)
+    mode: "no-cors",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ oldDoc, newDoc })
   })
   .then(() => {
-    document.getElementById("result").innerText = "Data submitted successfully";
+    document.getElementById("status").innerText =
+      "QC submitted successfully. Results will appear in the sheet.";
   })
-  .catch(err => {
-    document.getElementById("result").innerText = "Submission failed";
-    console.error(err);
+  .catch(() => {
+    document.getElementById("status").innerText = "Submission failed.";
   });
 }
 </script>
