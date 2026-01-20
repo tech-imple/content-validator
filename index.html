@@ -214,6 +214,23 @@ document.getElementById("qcForm").addEventListener("submit", function(e) {
     - Update cells dynamically
   */
 });
+
+  const API_URL = "https://script.google.com/a/macros/testbook.com/s/AKfycbwg7hhvgc_Iv2w4Fmz7UMW4nfc0JkbbaRDy93X6eFSqkYOWTDqHk8u9gX0f-pqwUso/exec";
+
+document.getElementById("qcForm").addEventListener("submit", function(e) {
+  e.preventDefault();
+
+  const oldDoc = document.getElementById("oldDoc").value;
+  const newDoc = document.getElementById("newDoc").value;
+
+  fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ oldDoc, newDoc })
+  });
+
+  alert("Submitted successfully!");
+});
 </script>
 
 </body>
