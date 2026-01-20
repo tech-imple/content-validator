@@ -1,114 +1,47 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Content Quality Check</title>
-<style>
-body { font-family: Arial; background:#f5f7fb; padding:40px; }
-.card { background:#fff; padding:30px; border-radius:12px; max-width:1100px; margin:auto; }
-input { width:100%; padding:10px; margin-top:6px; }
-button { padding:12px 22px; background:#2563eb; color:#fff; border:none; border-radius:6px; cursor:pointer; }
-table { width:100%; margin-top:30px; border-collapse:collapse; }
-th, td { border:1px solid #ddd; padding:12px; }
-th { background:#eafff1; }
-.badge { padding:6px 12px; border-radius:20px; font-weight:bold; }
-.pending { background:#fde68a; }
-.success { background:#bbf7d0; }
-.error { background:#fecaca; }
-</style>
+  <title>Content Quality Check</title>
 </head>
-
 <body>
-<div class="card">
-  <h1>Content Quality Check</h1>
-  <p>Layered GPT-based validation</p>
 
-  <label>Old Google Doc URL</label>
-  <input id="oldDoc">
+<h2>Content Validator</h2>
 
-  <label>New Google Doc URL</label>
-  <input id="newDoc">
+<input type="text" id="id" placeholder="Enter ID"><br><br>
 
-  <br><br>
-  <button onclick="runQC()">Run QC</button>
+<textarea id="content" placeholder="Enter Content" rows="6" cols="50"></textarea><br><br>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Old Doc</th>
-        <th>New Doc</th>
-        <th>Layer-1</th>
-        <th>Layer-2</th>
-        <th>Final QC</th>
-      </tr>
-    </thead>
-    <tbody id="result"></tbody>
-  </table>
-</div>
+<input type="number" id="score" placeholder="Score"><br><br>
+
+<button onclick="submitData()">Submit</button>
+
+<p id="result"></p>
 
 <script>
-const API =
-"https://script.google.com/macros/s/AKfycbwg7hhvgc_Iv2w4Fmz7UMW4nfc0JkbbaRDy93X6eFSqkYOWTDqHk8u9gX0f-pqwUso/exec";
+function submitData() {
+  const data = {
+    id: document.getElementById("id").value.trim(),
+    content: document.getElementById("content").value.trim(),
+    score: document.getElementById("score").value
+  };
 
-let currentQC = "";
-
-function runQC() {
-  const oldDoc = document.getElementById("oldDoc").value.trim();
-  const newDoc = document.getElementById("newDoc").value.trim();
-
-  if (!oldDoc || !newDoc) {
-    alert("Both URLs required");
-    return;
-  }
-
-  fetch(API, {
+  fetch("https://script.google.com/macros/s/AKfycbwg7hhvgc_Iv2w4Fmz7UMW4nfc0JkbbaRDy93X6eFSqkYOWTDqHk8u9gX0f-pqwUso/exec", {
     method: "POST",
-    body: JSON.stringify({ oldDoc, newDoc })
+    mode: "no-cors",   // 🔥 IMPORTANT FOR GOOGLE SCRIPT
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(data)
   })
-  .then(r => r.json())
-  .then(res => {
-    if (!res.success) throw res.error;
-    currentQC = res.qcId;
-
-    document.getElementById("result").innerHTML = `
-      <tr>
-        <td><a href="${oldDoc}" target="_blank">Open</a></td>
-        <td><a href="${newDoc}" target="_blank">Open</a></td>
-        <td class="badge pending">Queued</td>
-        <td class="badge pending">Queued</td>
-        <td class="badge pending">Waiting</td>
-      </tr>`;
-
-    pollStatus();
+  .then(() => {
+    document.getElementById("result").innerText = "Data submitted successfully";
   })
-  .catch(e => alert(e));
-}
-
-function pollStatus() {
-  fetch(API)
-    .then(r => r.json())
-    .then(rows => {
-      const row = rows.find(r => r["QC ID"] === currentQC);
-      if (!row) return;
-
-      updateUI(row);
-
-      if (row["Final QC"] === "Pending") {
-        setTimeout(pollStatus, 5000);
-      }
-    });
-}
-
-function updateUI(r) {
-  document.getElementById("result").innerHTML = `
-    <tr>
-      <td><a href="${r["Old Doc URL"]}" target="_blank">Open</a></td>
-      <td><a href="${r["New Doc URL"]}" target="_blank">Open</a></td>
-      <td>${r["Layer-1 Output"]}</td>
-      <td>${r["Layer-2 Output"]}</td>
-      <td class="badge ${r["Final QC"]==="Pending"?"pending":"success"}">${r["Final QC"]}</td>
-    </tr>`;
+  .catch(err => {
+    document.getElementById("result").innerText = "Submission failed";
+    console.error(err);
+  });
 }
 </script>
+
 </body>
 </html>
