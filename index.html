@@ -1,231 +1,114 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8">
 <title>Content Quality Check</title>
-
 <style>
-body {
-  font-family: Arial, sans-serif;
-  background: #f4f6f8;
-  margin: 0;
-  padding: 30px;
-}
-
-.container {
-  max-width: 1400px;
-  margin: auto;
-  background: #fff;
-  padding: 25px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
-
-h1 {
-  margin-bottom: 5px;
-}
-
-.subtitle {
-  color: #666;
-  margin-bottom: 25px;
-}
-
-/* FORM */
-form {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 15px;
-  margin-bottom: 30px;
-}
-
-label {
-  font-weight: bold;
-  font-size: 13px;
-}
-
-input {
-  width: 100%;
-  padding: 11px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-button {
-  margin-top: 18px;
-  padding: 11px 22px;
-  background: #2563eb;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-button:disabled {
-  background: #9ca3af;
-  cursor: not-allowed;
-}
-
-/* TABLE */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-th, td {
-  border: 1px solid #e5e7eb;
-  padding: 12px;
-  vertical-align: top;
-}
-
-th {
-  background: #e9f5e6;
-  text-align: left;
-}
-
-td a {
-  color: #2563eb;
-  font-weight: bold;
-  text-decoration: none;
-}
-
-.output {
-  white-space: pre-line;
-  line-height: 1.4;
-}
-
-.qc {
-  font-weight: bold;
-  text-align: center;
-}
-
-.pending {
-  color: #92400e;
-  background: #fde68a;
-  padding: 4px 10px;
-  border-radius: 12px;
-  display: inline-block;
-}
-
-.success {
-  color: #065f46;
-  background: #bbf7d0;
-  padding: 4px 10px;
-  border-radius: 12px;
-}
-
-.error {
-  color: #991b1b;
-  background: #fecaca;
-  padding: 4px 10px;
-  border-radius: 12px;
-}
-
-footer {
-  margin-top: 18px;
-  text-align: center;
-  font-size: 12px;
-  color: #888;
-}
+body { font-family: Arial; background:#f5f7fb; padding:40px; }
+.card { background:#fff; padding:30px; border-radius:12px; max-width:1100px; margin:auto; }
+input { width:100%; padding:10px; margin-top:6px; }
+button { padding:12px 22px; background:#2563eb; color:#fff; border:none; border-radius:6px; cursor:pointer; }
+table { width:100%; margin-top:30px; border-collapse:collapse; }
+th, td { border:1px solid #ddd; padding:12px; }
+th { background:#eafff1; }
+.badge { padding:6px 12px; border-radius:20px; font-weight:bold; }
+.pending { background:#fde68a; }
+.success { background:#bbf7d0; }
+.error { background:#fecaca; }
 </style>
 </head>
 
 <body>
-
-<div class="container">
+<div class="card">
   <h1>Content Quality Check</h1>
-  <p class="subtitle">Layered GPT-based validation</p>
+  <p>Layered GPT-based validation</p>
 
-  <!-- INPUT FORM -->
-  <form id="qcForm">
-    <div>
-      <label>Old Google Doc URL</label>
-      <input type="url" id="oldDoc" required placeholder="https://docs.google.com/document/..." />
-    </div>
+  <label>Old Google Doc URL</label>
+  <input id="oldDoc">
 
-    <div>
-      <label>New Google Doc URL</label>
-      <input type="url" id="newDoc" required placeholder="https://docs.google.com/document/..." />
-    </div>
+  <label>New Google Doc URL</label>
+  <input id="newDoc">
 
-    <div>
-      <button type="submit" id="runBtn">Run QC</button>
-    </div>
-  </form>
+  <br><br>
+  <button onclick="runQC()">Run QC</button>
 
-  <!-- TABLE -->
   <table>
     <thead>
       <tr>
         <th>Old Doc</th>
         <th>New Doc</th>
-        <th>Layer-1 Output</th>
-        <th>Layer-2 Output</th>
+        <th>Layer-1</th>
+        <th>Layer-2</th>
         <th>Final QC</th>
       </tr>
     </thead>
-    <tbody id="qcTable"></tbody>
+    <tbody id="result"></tbody>
   </table>
-
-  <footer>
-    Internal SEO Content QC System
-  </footer>
 </div>
 
 <script>
-/* 🔗 YOUR APPS SCRIPT WEB APP URL */
-const API_URL =
-  "https://script.google.com/macros/s/AKfycbwg7hhvgc_Iv2w4Fmz7UMW4nfc0JkbbaRDy93X6eFSqkYOWTDqHk8u9gX0f-pqwUso/exec";
+const API =
+"https://script.google.com/macros/s/AKfycbwg7hhvgc_Iv2w4Fmz7UMW4nfc0JkbbaRDy93X6eFSqkYOWTDqHk8u9gX0f-pqwUso/exec";
 
-document.getElementById("qcForm").addEventListener("submit", async function (e) {
-  e.preventDefault();
+let currentQC = "";
 
+function runQC() {
   const oldDoc = document.getElementById("oldDoc").value.trim();
   const newDoc = document.getElementById("newDoc").value.trim();
-  const table = document.getElementById("qcTable");
-  const btn = document.getElementById("runBtn");
 
-  btn.disabled = true;
-
-  const row = document.createElement("tr");
-  row.innerHTML = `
-    <td><a href="${oldDoc}" target="_blank">Open</a></td>
-    <td><a href="${newDoc}" target="_blank">Open</a></td>
-    <td class="output">Processing...</td>
-    <td class="output">Processing...</td>
-    <td class="qc"><span class="pending">Pending</span></td>
-  `;
-  table.prepend(row);
-
-  try {
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ oldDoc, newDoc })
-    });
-
-    const data = await response.json();
-
-    if (data.status === "success") {
-      row.children[2].innerText = data.layer1 || "—";
-      row.children[3].innerText = data.layer2 || "—";
-      row.children[4].innerHTML =
-        `<span class="success">${data.finalQC}</span>`;
-    } else {
-      row.children[4].innerHTML =
-        `<span class="error">Error</span>`;
-    }
-  } catch (err) {
-    row.children[4].innerHTML =
-      `<span class="error">Error</span>`;
+  if (!oldDoc || !newDoc) {
+    alert("Both URLs required");
+    return;
   }
 
-  btn.disabled = false;
-  document.getElementById("oldDoc").value = "";
-  document.getElementById("newDoc").value = "";
-});
-</script>
+  fetch(API, {
+    method: "POST",
+    body: JSON.stringify({ oldDoc, newDoc })
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (!res.success) throw res.error;
+    currentQC = res.qcId;
 
+    document.getElementById("result").innerHTML = `
+      <tr>
+        <td><a href="${oldDoc}" target="_blank">Open</a></td>
+        <td><a href="${newDoc}" target="_blank">Open</a></td>
+        <td class="badge pending">Queued</td>
+        <td class="badge pending">Queued</td>
+        <td class="badge pending">Waiting</td>
+      </tr>`;
+
+    pollStatus();
+  })
+  .catch(e => alert(e));
+}
+
+function pollStatus() {
+  fetch(API)
+    .then(r => r.json())
+    .then(rows => {
+      const row = rows.find(r => r["QC ID"] === currentQC);
+      if (!row) return;
+
+      updateUI(row);
+
+      if (row["Final QC"] === "Pending") {
+        setTimeout(pollStatus, 5000);
+      }
+    });
+}
+
+function updateUI(r) {
+  document.getElementById("result").innerHTML = `
+    <tr>
+      <td><a href="${r["Old Doc URL"]}" target="_blank">Open</a></td>
+      <td><a href="${r["New Doc URL"]}" target="_blank">Open</a></td>
+      <td>${r["Layer-1 Output"]}</td>
+      <td>${r["Layer-2 Output"]}</td>
+      <td class="badge ${r["Final QC"]==="Pending"?"pending":"success"}">${r["Final QC"]}</td>
+    </tr>`;
+}
+</script>
 </body>
 </html>
