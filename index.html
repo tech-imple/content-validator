@@ -10,6 +10,7 @@ body {
   background: #f4f6f8;
   padding: 20px;
 }
+
 .container {
   max-width: 1400px;
   margin: auto;
@@ -18,130 +19,124 @@ body {
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
+
+h1 { margin-bottom: 5px; }
+.subtitle { color:#666; margin-bottom:20px; }
+
 form {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 15px;
-  margin-bottom: 25px;
+  display:grid;
+  grid-template-columns:1fr 1fr auto;
+  gap:15px;
+  margin-bottom:25px;
 }
+
 input {
-  padding: 10px;
+  padding:10px;
+  border:1px solid #ccc;
+  border-radius:4px;
 }
+
 button {
-  padding: 11px 20px;
-  background: #2563eb;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  font-weight: bold;
-  cursor: pointer;
+  padding:11px 20px;
+  background:#2563eb;
+  color:#fff;
+  border:none;
+  border-radius:4px;
+  font-weight:bold;
+  cursor:pointer;
 }
+
 table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
+  width:100%;
+  border-collapse:collapse;
+  font-size:13px;
 }
-th, td {
-  border: 1px solid #e5e7eb;
-  padding: 10px;
+
+th,td {
+  border:1px solid #e5e7eb;
+  padding:10px;
+  vertical-align:top;
 }
-th {
-  background: #e9f5e6;
-}
-.output {
-  white-space: pre-line;
-}
-.qc {
-  text-align: center;
-  font-weight: bold;
-}
+
+th { background:#e9f5e6; }
+
+.output { white-space:pre-line; }
+
+.qc { font-weight:bold; text-align:center; }
+
 .pending {
-  background: #fde68a;
-  padding: 4px 10px;
-  border-radius: 12px;
+  background:#fde68a;
+  padding:4px 10px;
+  border-radius:12px;
 }
+
 .success {
-  background: #dcfce7;
-  color: #166534;
-  padding: 6px 10px;
-  border-radius: 12px;
+  background:#bbf7d0;
+  padding:4px 10px;
+  border-radius:12px;
 }
 </style>
 </head>
 
 <body>
-
 <div class="container">
-  <h2>Content Quality Check</h2>
+<h1>Content Quality Check</h1>
+<p class="subtitle">Layered GPT-based validation</p>
 
-  <form id="qcForm">
-    <input type="url" id="oldDoc" placeholder="Old Doc URL" required>
-    <input type="url" id="newDoc" placeholder="New Doc URL" required>
-    <button type="submit">Run QC</button>
-  </form>
+<form id="qcForm">
+  <input id="oldDoc" placeholder="Old Doc URL" required>
+  <input id="newDoc" placeholder="New Doc URL" required>
+  <button>Run QC</button>
+</form>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Old Doc</th>
-        <th>New Doc</th>
-        <th>Layer-1 Output</th>
-        <th>Layer-2 Output</th>
-        <th>Final QC</th>
-      </tr>
-    </thead>
-    <tbody id="qcTable"></tbody>
-  </table>
+<table>
+<thead>
+<tr>
+<th>Old Doc</th>
+<th>New Doc</th>
+<th>Layer-1 Output</th>
+<th>Layer-2 Output</th>
+<th>Final QC</th>
+</tr>
+</thead>
+<tbody id="qcTable"></tbody>
+</table>
 </div>
 
 <script>
-const API_URL =
-"https://script.google.com/macros/s/AKfycby3xbekR1kJpAKvpZoHfls8oAMLcn7PH28CLBOnGZf6Np1YyBvW5D3Gr9BtyQZg3nme/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby3xbekR1kJpAKvpZoHfls8oAMLcn7PH28CLBOnGZf6Np1YyBvW5D3Gr9BtyQZg3nme/exec";
 
-document.getElementById("qcForm").addEventListener("submit", async function(e) {
+document.getElementById("qcForm").addEventListener("submit", async e => {
   e.preventDefault();
 
-  const oldDoc = oldDocInput.value;
-  const newDoc = newDocInput.value;
+  const oldDoc = oldDocEl.value;
+  const newDoc = newDocEl.value;
   const table = document.getElementById("qcTable");
 
-  // Create row immediately
   const row = document.createElement("tr");
   row.innerHTML = `
     <td><a href="${oldDoc}" target="_blank">Open</a></td>
     <td><a href="${newDoc}" target="_blank">Open</a></td>
-    <td class="output">⏳ Running Layer-1...</td>
-    <td class="output">⏳ Running Layer-2...</td>
+    <td class="output">Processing…</td>
+    <td class="output">Processing…</td>
     <td class="qc"><span class="pending">Pending</span></td>
   `;
   table.prepend(row);
 
-  // Clear form
+  const res = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({ oldDoc, newDoc })
+  });
+
+  const data = await res.json();
+
+  row.children[2].textContent = data.layer1;
+  row.children[3].textContent = data.layer2;
+  row.children[4].innerHTML =
+    `<span class="success">${data.qc}</span>`;
+
   qcForm.reset();
-
-  try {
-    const res = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ oldDoc, newDoc })
-    });
-
-    const data = await res.json();
-
-    // Populate UI from Apps Script response
-    row.children[2].textContent = data.layer1 || "—";
-    row.children[3].textContent = data.layer2 || "—";
-    row.children[4].innerHTML =
-      `<span class="success">${data.qcScore || "NA"}%</span>`;
-
-  } catch (err) {
-    row.children[2].textContent = "❌ Error";
-    row.children[3].textContent = "❌ Error";
-    row.children[4].textContent = "Failed";
-    console.error(err);
-  }
 });
 </script>
-
 </body>
 </html>
